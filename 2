@@ -1,0 +1,24 @@
+
+input {
+  twitter {
+    consumer_key => '1432NMuYG31SNBjOKRxKcjDVG'
+    consumer_secret => 'AaWYlWn7PEYnR73wQuDEFfZXW2GYiT9j51vJu9Kk32XPa2LixU'
+    oauth_token => '14830067-GYxA9uV2pE6EviIJsKN4yty2tvUvCLK9nTzcxXol5'
+    oauth_token_secret => '9cHGC3dUzh1nDaDupWuCDUK5lIIvqe4jVyWlTUN7vbiAF'
+    keywords           => [ "covid-19", "coronavirus", "wuhan", "Xi Jinping", "Xi JinPing", "Jinping"]
+    full_tweet => true
+  }
+}
+
+filter {
+  mutate {
+    remove_field => ['retweeted_status']
+  }
+}
+
+output {
+  elasticsearch {
+      hosts => ["http://elk.ethcards.co:9200"]
+      index => "twitter_elastic_blzelle"
+  }
+}

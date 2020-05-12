@@ -1,0 +1,144 @@
+version: "3"
+
+services:
+  traefik:
+    restart: unless-stopped
+    image: traefik:1.7.0
+    command: --api --docker
+    ports:
+      - 9081:8080
+      - 90:80
+    networks:
+      - elastic
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik.toml:/etc/traefik/traefik.toml
+      - ./.htpasswd:/tmp/.htpasswd
+      - ./acme.json:/acme.json
+
+  #############################
+  # ELASTICSEARCH MASTER NODE #
+  #############################
+  master:
+    restart: always
+    image: blacktop/elasticsearch:6.2
+    environment:
+      - cluster.name=docker-cluster11
+      - node.master=true
+      - node.ingest=false
+      - node.data=false
+      - path.repo=/mount/backups
+    volumes:
+      - /data/container/master:/usr/share/elasticsearch/data
+      - /data/container/mount:/mount:rw
+      - /mount/backups:/mount/backups:rw
+    labels:
+      - "traefik.frontend.rule=Host:elk.ethcards.co"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    networks:
+      - elastic
+  ###########################
+  # ELASTICSEARCH DATA NODE #
+  ###########################
+  data:
+    restart: unless-stopped
+    image: blacktop/elasticsearch:6.2
+    environment:
+      - ES_JAVA_OPTS=-Xms4g -Xmx4g
+      - cluster.name=docker-cluster11
+      - node.master=false
+      - node.ingest=false
+      - node.data=true
+      - discovery.zen.ping.unicast.hosts=master
+      - path.repo=/mount/backups
+    links:
+     - master:elastic-master
+       #volumes:
+       #- data:/usr/share/elasticsearch/data
+    volumes:
+      - /data/container/data:/usr/share/elasticsearch/data
+      - /data/container/mount:/mount:rw
+      - /mount/backups:/mount/backups:rw
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    networks:
+      - elastic
+        #deploy:
+        #mode: replicated
+        #replicas: 2
+  ###############
+  # KIBANA NODE #
+  ###############
+  kibana:
+    restart: unless-stopped
+    image: blacktop/kibana:6.2
+    #ports:
+    #  - "80:5601"
+    networks:
+      - elastic
+    environment:
+      - elasticsearch.url="http://master:9200"
+      - elasticsearch.username="test2"
+      - elasticsearch.password="MIIFNjCCBB6g"
+        #links:
+        #- ingest:elastic-ingest
+    links:
+     - master:elastic-master
+    labels:
+      - "traefik.frontend.rule=Host:kibana.ethcards.co"
+  ###########################
+  # CEREBRO #
+  #  docker run -d --name cerebro -p 9000:9000 -e ES_URLS=http://mwang:didipan8@elk.ethcards.FROM openjdk:8-jre-alpine
+  ###########################
+  cerebro:
+          # restart: unless-stopped
+    image: yannart/cerebro
+    links:
+     - master:elastic-master
+    ports:
+      - "9000:9000"
+    networks:
+      - elastic
+    labels:
+      - "traefik.frontend.rule=Host:cerebro.ethcards.co"
+
+  data_tmp:
+    restart: unless-stopped
+    image: blacktop/elasticsearch:6.2
+    environment:
+      - ES_JAVA_OPTS=-Xms4g -Xmx4g
+      - cluster.name=docker-cluster11
+      - node.master=false
+      - node.ingest=false
+      - node.data=true
+      - discovery.zen.ping.unicast.hosts=master
+      - path.repo=/mount/backups
+    links:
+      - master:elastic-master
+        #volumes:
+        #- data:/usr/share/elasticsearch/data
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    networks:
+      - elastic
+    volumes:
+      - /data/container/mount:/mount:rw
+      - /mount/backups:/mount/backups:rw
+#############################
+# ELASTICSEARCH DATA VOLUME #
+#############################
+volumes:
+  data:
+################################
+# ELASTICSEARCH BRIDGE NETWORK #
+################################
+networks:
+  elastic:
+    driver: bridge
