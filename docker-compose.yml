@@ -35,29 +35,20 @@ services:
       - /data/container/mount:/mount:rw
       - /mount/backups:/mount/backups:rw
     labels:
-      - "traefik.frontend.rule=Host:elk.ethcards.co"
+      - "traefik.frontend.rule=Host:elk.log4analytics.com"
     ulimits:
       memlock:
         soft: -1
         hard: -1
-    expose:
-      - "9200"
-    ports:
-      - "9200:9200"
     networks:
       - elastic
 
   logstash:
     image: docker.elastic.co/logstash/logstash:7.6.2
-    container_name: logstash
     environment:
       - pipeline.workers=1
     volumes:
     - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
-    ports:
-      - "5140:5140/udp"
-    expose:
-      - "5140/udp"
     networks:
       - elastic
     depends_on:
@@ -82,7 +73,7 @@ services:
     links:
       - master:elastic-master
     labels:
-      - "traefik.frontend.rule=Host:kibana.ethcards.co"
+      - "traefik.frontend.rule=Host:kibana.log4analytics.com"
 
 #############################
 # ELASTICSEARCH DATA VOLUME #
