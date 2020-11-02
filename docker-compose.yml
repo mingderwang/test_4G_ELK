@@ -20,6 +20,7 @@ services:
   # ELASTICSEARCH MASTER NODE #
   #############################
   master:
+    restart: unless-stopped
     image: blacktop/elasticsearch:x-pack 
     environment:
       - bootstrap.memory_lock=true
@@ -44,6 +45,7 @@ services:
       - elastic
 
   logstash:
+    restart: unless-stopped
     image: docker.elastic.co/logstash/logstash:7.6.2
     environment:
       - pipeline.workers=1
@@ -59,6 +61,7 @@ services:
   # KIBANA NODE #
   ###############
   kibana:
+    restart: unless-stopped
     image: blacktop/kibana:x-pack 
     #ports:
     #  - "80:5601"
@@ -75,6 +78,14 @@ services:
     labels:
       - "traefik.frontend.rule=Host:kibana.log4analytics.com"
 
+  uni-resolver-web:
+    image: universalresolver/uni-resolver-web:latest
+    ports:
+      - "9082:8080"
+    labels:
+      - "traefik.frontend.rule=Host:resolver.log4analytics.com"
+    networks:
+      - elastic
 #############################
 # ELASTICSEARCH DATA VOLUME #
 #############################
